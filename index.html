@@ -1,314 +1,315 @@
-<!doctype html>
+<!DOCTYPE html>
 <html>
-<head>
-<meta charset="utf-8">
-<title>3D烟花</title>
-    <link rel="icon" href="10.10.90.109/创客/创客资料/叶/mmexport1678072356976.png">
-
-<style>
-html,body{
-margin:0px;
-width:100%;
-height:100%;
-overflow:hidden;
-background:#000;
-}
-
-#canvas{
-width:100%;
-height:100%;
-}
-</style>
-</head>
-<body>
-<canvas id="canvas"></canvas><script>
-function initVars(){
-
-pi=Math.PI;
-ctx=canvas.getContext("2d");
-canvas.width=canvas.clientWidth;
-canvas.height=canvas.clientHeight;
-cx=canvas.width/2;
-cy=canvas.height/2;
-playerZ=-25;
-playerX=playerY=playerVX=playerVY=playerVZ=pitch=yaw=pitchV=yawV=0;
-scale=600;
-seedTimer=0;seedInterval=5,seedLife=100;gravity=.02;
-seeds=new Array();
-sparkPics=new Array();
-s="https://cantelope.org/NYE/";
-for(i=1;i<=10;++i){
-sparkPic=new Image();
-sparkPic.src=s+"spark"+i+".png";
-sparkPics.push(sparkPic);
-}
-sparks=new Array();
-pow1=new Audio(s+"pow1.ogg");
-pow2=new Audio(s+"pow2.ogg");
-pow3=new Audio(s+"pow3.ogg");
-pow4=new Audio(s+"pow4.ogg");
-frames = 0;
-}
-
-function rasterizePoint(x,y,z){
-
-var p,d;
-x-=playerX;
-y-=playerY;
-z-=playerZ;
-p=Math.atan2(x,z);
-d=Math.sqrt(x*x+z*z);
-x=Math.sin(p-yaw)*d;
-z=Math.cos(p-yaw)*d;
-p=Math.atan2(y,z);
-d=Math.sqrt(y*y+z*z);
-y=Math.sin(p-pitch)*d;
-z=Math.cos(p-pitch)*d;
-var rx1=-1000,ry1=1,rx2=1000,ry2=1,rx3=0,ry3=0,rx4=x,ry4=z,uc=(ry4-ry3)*(rx2-rx1)-(rx4-rx3)*(ry2-ry1);
-if(!uc) return {x:0,y:0,d:-1};
-var ua=((rx4-rx3)*(ry1-ry3)-(ry4-ry3)*(rx1-rx3))/uc;
-var ub=((rx2-rx1)*(ry1-ry3)-(ry2-ry1)*(rx1-rx3))/uc;
-if(!z)z=.000000001;
-if(ua>0&&ua<1&&ub>0&&ub<1){
-return {
-x:cx+(rx1+ua*(rx2-rx1))*scale,
-y:cy+y/z*scale,
-d:Math.sqrt(x*x+y*y+z*z)
-};
-}else{
-return {
-x:cx+(rx1+ua*(rx2-rx1))*scale,
-y:cy+y/z*scale,
-d:-1
-};
-}
-}
-
-function spawnSeed(){
-
-seed=new Object();
-seed.x=-50+Math.random()*100;
-seed.y=25;
-seed.z=-50+Math.random()*100;
-seed.vx=.1-Math.random()*.2;
-seed.vy=-1.5;//*(1+Math.random()/2);
-seed.vz=.1-Math.random()*.2;
-seed.born=frames;
-seeds.push(seed);
-}
-
-function splode(x,y,z){
-
-t=5+parseInt(Math.random()*150);
-sparkV=1+Math.random()*2.5;
-type=parseInt(Math.random()*3);
-switch(type){
-case 0:
-pic1=parseInt(Math.random()*10);
-break;
-case 1:
-pic1=parseInt(Math.random()*10);
-do{ pic2=parseInt(Math.random()*10); }while(pic2==pic1);
-break;
-case 2:
-pic1=parseInt(Math.random()*10);
-do{ pic2=parseInt(Math.random()*10); }while(pic2==pic1);
-do{ pic3=parseInt(Math.random()*10); }while(pic3==pic1 || pic3==pic2);
-break;
-}
-for(m=1;m<t;++m){
-spark=new Object();
-spark.x=x; spark.y=y; spark.z=z;
-p1=pi*2*Math.random();
-p2=pi*Math.random();
-v=sparkV*(1+Math.random()/6)
-spark.vx=Math.sin(p1)*Math.sin(p2)*v;
-spark.vz=Math.cos(p1)*Math.sin(p2)*v;
-spark.vy=Math.cos(p2)*v;
-switch(type){
-case 0: spark.img=sparkPics[pic1]; break;
-case 1:
-spark.img=sparkPics[parseInt(Math.random()*2)?pic1:pic2];
-break;
-case 2:
-switch(parseInt(Math.random()*3)){
-case 0: spark.img=sparkPics[pic1]; break;
-case 1: spark.img=sparkPics[pic2]; break;
-case 2: spark.img=sparkPics[pic3]; break;
-}
-break;
-}
-spark.radius=25+Math.random()*50;
-spark.alpha=1;
-spark.trail=new Array();
-sparks.push(spark);
-}
-switch(parseInt(Math.random()*4)){
-case 0:    pow=new Audio(s+"pow1.ogg"); break;
-case 1:    pow=new Audio(s+"pow2.ogg"); break;
-case 2:    pow=new Audio(s+"pow3.ogg"); break;
-case 3:    pow=new Audio(s+"pow4.ogg"); break;
-}
-d=Math.sqrt((x-playerX)*(x-playerX)+(y-playerY)*(y-playerY)+(z-playerZ)*(z-playerZ));
-pow.volume=1.5/(1+d/10);
-pow.play();
-}
-
-function doLogic(){
-
-if(seedTimer<frames){
-seedTimer=frames+seedInterval*Math.random()*10;
-spawnSeed();
-}
-for(i=0;i<seeds.length;++i){
-seeds[i].vy+=gravity;
-seeds[i].x+=seeds[i].vx;
-seeds[i].y+=seeds[i].vy;
-seeds[i].z+=seeds[i].vz;
-if(frames-seeds[i].born>seedLife){
-splode(seeds[i].x,seeds[i].y,seeds[i].z);
-seeds.splice(i,1);
-}
-}
-for(i=0;i<sparks.length;++i){
-if(sparks[i].alpha>0 && sparks[i].radius>5){
-sparks[i].alpha-=.01;
-sparks[i].radius/=1.02;
-sparks[i].vy+=gravity;
-point=new Object();
-point.x=sparks[i].x;
-point.y=sparks[i].y;
-point.z=sparks[i].z;
-if(sparks[i].trail.length){
-x=sparks[i].trail[sparks[i].trail.length-1].x;
-y=sparks[i].trail[sparks[i].trail.length-1].y;
-z=sparks[i].trail[sparks[i].trail.length-1].z;
-d=((point.x-x)*(point.x-x)+(point.y-y)*(point.y-y)+(point.z-z)*(point.z-z));
-if(d>9){
-sparks[i].trail.push(point);
-}
-}else{
-sparks[i].trail.push(point);
-}
-if(sparks[i].trail.length>5)sparks[i].trail.splice(0,1);    
-sparks[i].x+=sparks[i].vx;
-sparks[i].y+=sparks[i].vy;
-sparks[i].z+=sparks[i].vz;
-sparks[i].vx/=1.075;
-sparks[i].vy/=1.075;
-sparks[i].vz/=1.075;
-}else{
-sparks.splice(i,1);
-}
-}
-p=Math.atan2(playerX,playerZ);
-d=Math.sqrt(playerX*playerX+playerZ*playerZ);
-d+=Math.sin(frames/80)/1.25;
-t=Math.sin(frames/200)/40;
-playerX=Math.sin(p+t)*d;
-playerZ=Math.cos(p+t)*d;
-yaw=pi+p+t;
-}
-
-function rgb(col){
-
-var r = parseInt((.5+Math.sin(col)*.5)*16);
-var g = parseInt((.5+Math.cos(col)*.5)*16);
-var b = parseInt((.5-Math.sin(col)*.5)*16);
-return "#"+r.toString(16)+g.toString(16)+b.toString(16);
-}
-
-function draw(){
-
-ctx.clearRect(0,0,cx*2,cy*2);
-
-ctx.fillStyle="#ff8";
-for(i=-100;i<100;i+=3){
-for(j=-100;j<100;j+=4){
-x=i;z=j;y=25;
-point=rasterizePoint(x,y,z);
-if(point.d!=-1){
-size=250/(1+point.d);
-d = Math.sqrt(x * x + z * z);
-a = 0.75 - Math.pow(d / 100, 6) * 0.75;
-if(a>0){
-ctx.globalAlpha = a;
-ctx.fillRect(point.x-size/2,point.y-size/2,size,size);    
-}
-}
-}
-}
-ctx.globalAlpha=1;
-for(i=0;i<seeds.length;++i){
-point=rasterizePoint(seeds[i].x,seeds[i].y,seeds[i].z);
-if(point.d!=-1){
-size=200/(1+point.d);
-ctx.fillRect(point.x-size/2,point.y-size/2,size,size);
-}
-}
-point1=new Object();
-for(i=0;i<sparks.length;++i){
-point=rasterizePoint(sparks[i].x,sparks[i].y,sparks[i].z);
-if(point.d!=-1){
-size=sparks[i].radius*200/(1+point.d);
-if(sparks[i].alpha<0)sparks[i].alpha=0;
-if(sparks[i].trail.length){
-point1.x=point.x;
-point1.y=point.y;
-switch(sparks[i].img){
-case sparkPics[0]:ctx.strokeStyle="#f84";break;
-case sparkPics[1]:ctx.strokeStyle="#84f";break;
-case sparkPics[2]:ctx.strokeStyle="#8ff";break;
-case sparkPics[3]:ctx.strokeStyle="#fff";break;
-case sparkPics[4]:ctx.strokeStyle="#4f8";break;
-case sparkPics[5]:ctx.strokeStyle="#f44";break;
-case sparkPics[6]:ctx.strokeStyle="#f84";break;
-case sparkPics[7]:ctx.strokeStyle="#84f";break;
-case sparkPics[8]:ctx.strokeStyle="#fff";break;
-case sparkPics[9]:ctx.strokeStyle="#44f";break;
-}
-for(j=sparks[i].trail.length-1;j>=0;--j){
-point2=rasterizePoint(sparks[i].trail[j].x,sparks[i].trail[j].y,sparks[i].trail[j].z);
-if(point2.d!=-1){
-ctx.globalAlpha=j/sparks[i].trail.length*sparks[i].alpha/2;
-ctx.beginPath();
-ctx.moveTo(point1.x,point1.y);
-ctx.lineWidth=1+sparks[i].radius*10/(sparks[i].trail.length-j)/(1+point2.d);
-ctx.lineTo(point2.x,point2.y);
-ctx.stroke();
-point1.x=point2.x;
-point1.y=point2.y;
-}
-}
-}
-ctx.globalAlpha=sparks[i].alpha;
-ctx.drawImage(sparks[i].img,point.x-size/2,point.y-size/2,size,size);
-}
-}
-}
-
-function frame(){
-
-if(frames>100000){
-seedTimer=0;
-frames=0;
-}
-frames++;
-draw();
-doLogic();
-requestAnimationFrame(frame);
-}
-
-window.addEventListener("resize",()=>{
-canvas.width=canvas.clientWidth;
-canvas.height=canvas.clientHeight;
-cx=canvas.width/2;
-cy=canvas.height/2;
-});
-
-initVars();
-frame();</script>
-<div style="text-align:center;">
-</div>
-</body>
+	<head>
+		<meta charset="utf-8" />
+		<title>Li Shu's site</title>
+		<link href="img/title.ico" rel="shortcut icon"/>
+		<style type="text/css">
+			html{
+				position: relative;
+			}
+			.top{
+				background-color: #FFFFFF;
+				height: 60px;
+				width: 1900px;
+				position: absolute;
+				top: 0;
+				left: 0;
+			}
+			.top h1{
+				padding-left: 150px;
+				font-family: "华文新魏";
+			}
+			.top-left{
+				width: 250px;
+				height: 50px;
+			}
+			.top-left span{
+				position: absolute;
+				top: 15px;
+				left: 250px;
+				font-family: "华文新魏";
+				font-size: 28px;
+				color: pink;
+				float: left;
+				display: none;
+			}
+			.top-left:hover span{
+				display: block;
+			}
+			.top1{
+				position: absolute;
+				top: 0px;
+				left: 600px;
+				padding: 20px;
+				font-family: "华文新魏";
+				font-size: 30px;
+			}
+			.top2{
+				position: absolute;
+				top: 0px;
+				left: 800px;
+				padding: 20px;
+				font-family: "华文新魏";
+				font-size: 30px;
+			}
+			.top3{
+				position: absolute;
+				top: 0px;
+				left: 1050px;
+				padding: 20px;
+				font-family: "华文新魏";
+				font-size: 30px;
+			}
+			.top4{
+				position: absolute;
+				top: 0px;
+				left: 1300px;
+				padding: 20px;
+				font-family: "华文新魏";
+				font-size: 30px;
+			}
+			a{
+				text-decoration: none;
+				color: black;
+			}
+			a:hover{
+				text-decoration: none;
+				color:  orange;
+			}
+			a:active{
+				text-decoration: line-through;
+				color: cadetblue;
+			}
+			.top-right{
+					position: absolute;
+					top: 0px;
+					right: 30px;
+					padding: 20px;
+					font-family: "华文新魏";
+					font-size: 20px;
+			}
+			.top img{
+				width: 40px;
+				height: 40px;
+				border-radius: 25px;
+				position: absolute;
+				top: 5px;
+				right: 0px;
+			}
+			.top-right1{
+					position: absolute;
+					top: -4px;
+					right: -150px;
+					padding: 20px;
+			}
+			.top-right1 input{
+				font-family: "华文新魏";
+				font-size: 20px;
+				border-radius: 8px;
+			}
+			.main{
+				position: absolute;
+				top: 60px;
+				left: 0;
+				background-image: url(img/人生背景.jpg);
+				background-repeat: no-repeat;
+				background-size: cover;
+				background-attachment: fixed;
+				width: 2133px;
+				height: 1141px;
+			}
+			.main-left h1{
+				position: absolute;
+				left: 50px;
+				top: 180px;
+				color: #517693;
+				font-size: 40px;
+				font-weight: bold;
+				font-family: "华文行楷";
+			}
+			.main-left h3{
+				position: absolute;
+				left: 50px;
+				top: 280px;
+				color: #517693;
+				font-size: 28px;
+				font-weight: bold;
+				font-family: "华文行楷";
+			}
+			.center-left{
+				position: absolute;
+				top: 30px;
+				left: 550px;
+				width: 250px;
+				height: 850px;
+				border: 3px solid white;
+				border-radius: 20px;
+				background-color:white;
+				opacity: 0.8;
+			}
+			.center-left img{
+				width: 100px;
+				height: 100px;
+				border-radius: 100px;
+				position: absolute;
+				top: 5px;
+				left: 75px;
+			}
+			.center-left #name{
+				position: absolute;
+				top: 110px;
+				left: 75px;
+				text-align: center;
+				font-family: "华文新魏";
+				font-size: 17px;
+			}
+			.span ul{
+				position:absolute;
+				top: 200px;
+				left: 510px;
+				width: 250px;
+				height: 680px;
+			}
+			.span li{
+				line-height: 111px;
+				list-style-type: none;
+			}
+			.pane{
+				width: 256px;
+				text-align: center;
+				font-family: "华文新魏";
+				font-size: 20px;
+			}
+			.pane:hover{
+				background-color: white;
+			}
+			.pane1{
+				width: 256px;
+				height: 114px;
+				border-bottom-left-radius: 15px;
+				border-bottom-right-radius: 15px;
+				text-align: center;
+				font-family: "华文新魏";
+				font-size: 20px;
+			}
+			.pane1:hover{
+				background-color: white;
+			}
+			.center{
+				position: absolute;
+				top: 30px;
+				left: 820px;
+				width: 850px;
+				height: 850px;
+				border: 3px solid white;
+				border-radius: 20px;
+				background: rgba(250,250,250,0.8);
+			}
+			.center iframe{
+				border-radius: 20px;
+			}
+			#showtime1{
+					position: absolute;
+					left: 30px;
+					bottom: 20px;
+					color: #517693;
+					font-size: 28px;
+					font-weight: bold;
+					font-family: "华文新魏";
+					}
+			#showtime2{
+					position: absolute;
+					left:40px;
+					bottom: -15px;
+					color: #517693;
+					font-size: 25px;
+					font-weight: bold;
+					font-family: "华文新魏";
+					}
+			.time{
+				position: absolute;
+				right: 30px;
+				bottom: 5px;
+				color: #517693;
+				font-size: 28px;
+				font-weight: bold;
+				font-family: "华文新魏";
+				}
+			.bottom
+			{
+				position: absolute;
+				top: 1110px;
+				width: 2110px;
+				height: 85px;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="top">
+			<div class="top-left">
+				<h1>LIGHTNING</h1>
+				<span>风止于秋水，我止于你💗</span>
+			</div>
+			<a class="top1" href="home page.html">首页</a>
+			<a class="top2" href="work.html">CSDN</a>
+			<a class="top3" href="life.html">B站</a>
+			<a class="top4" href="message board.html">OPENAI</a>
+			<span class="top-right">黎曙</span>
+			<img src="img/头像.jpg" title="头像" alt="头像" />
+			<span class="top-right1"><input type="submit" value="登录"></span>
+		</div>
+		<div class="main">
+			<div class="main-left">
+				<h1>欢迎来到黎曙的世界！<br/>Welcome to Li Shu's world!</h1>
+				<h3>今天也要加油昂！<br/>Today, we still have to refuel!</h3>
+			</div>
+			<div class="main-center">
+				<div class="center-left">
+					<a href="my.html" target="frame"><img src="img/头像.jpg" alt="头像" title="头像" /></a>
+					<span id="name">黎曙<br/>非常热爱生活</span>
+				</div>
+			</div>
+				<div class="span">
+						<ul>
+							<li class="pane"><a href="main1.html" target="frame">主页</a></li>
+							<li class="pane"><a href="work.html" target="frame">笔记</a></li>
+							<li class="pane"><a href="conclude.html" target="frame">归档</a></li>
+							<li class="pane"><a href="email.html" target="frame">邮箱</a></li>
+							<li class="pane"><a href="about.html" target="frame">关于</a></li>
+							<li class="pane1">更多</li>
+						</ul>
+				</div>
+				<div class="center">
+					<iframe src="main1.html" width="850px" height="850px" frameborder="0" scrolling="yes" name="frame"></iframe>
+				</div>
+			</div>
+		<div class="bottom">
+			<p id="showtime1" title="我们的征途是星辰大海">哈雷彗星的约定：</p>
+			<p id="showtime2" >14193天3:22:55</p>
+			<script>
+				var showtime2 = function () {
+					var nowtime = new Date();
+						endtime = new Date("2061/1/1");
+					var lefttime = endtime.getTime() - nowtime.getTime();
+						leftd = Math.floor(lefttime/(1000*60*60*24));  
+						lefth = Math.floor(lefttime/(1000*60*60)%24);  
+						leftm = Math.floor(lefttime/(1000*60)%60);  
+						lefts = Math.floor(lefttime/1000%60); 
+					return leftd + "&#22825;" + lefth + ":" + leftm + ":" + lefts;
+				}
+				var div = document.getElementById("showtime2");
+				setInterval (function () {
+					div.innerHTML = showtime2();
+				}, 1000);
+			</script>
+			<div class="time">
+				<script> 
+					document.write("<span id=time></span>") 
+					setInterval("time.innerText=new Date().toLocaleString()",1000)
+				</script> 
+			</div>
+		</div>
+	</body>
 </html>
+
